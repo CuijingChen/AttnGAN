@@ -284,7 +284,7 @@ if __name__ == "__main__":
                 lr *= 0.98
 
             if (epoch % cfg.TRAIN.SNAPSHOT_INTERVAL == 0 or
-                epoch == cfg.TRAIN.MAX_EPOCH):
+                epoch == (cfg.TRAIN.MAX_EPOCH - 1)):
                 torch.save(image_encoder.state_dict(),
                            '%s/image_encoder%d.pth' % (model_dir, epoch))
                 torch.save(text_encoder.state_dict(),
