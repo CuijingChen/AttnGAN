@@ -33,7 +33,7 @@ class condGANTrainer(object):
             mkdir_p(self.model_dir)
             mkdir_p(self.image_dir)
 
-        torch.cuda.set_device(cfg.GPU_ID)
+        # torch.cuda.set_device(cfg.GPU_ID)
         # setup GPU device if available, move model into configured device
         if torch.cuda.is_available():
             print("use GPU")
@@ -64,9 +64,6 @@ class condGANTrainer(object):
         state_dict = \
             torch.load(img_encoder_path, map_location=lambda storage, loc: storage)
         image_encoder.load_state_dict(state_dict)
-        #######
-        image_encoder = torch.nn.DataParallel(image_encoder.to(self.device))
-        #######
         for p in image_encoder.parameters():
             p.requires_grad = False
         print('Load image encoder from:', img_encoder_path)
@@ -133,11 +130,11 @@ class condGANTrainer(object):
                     netsD[i].load_state_dict(state_dict)
         # ########################################################### #
         if cfg.CUDA:
-            text_encoder = text_encoder.cuda()
-            image_encoder = image_encoder.cuda()
-            netG.cuda()
+            text_encoder = torch.nn.DataParallel(text_encoder.to(self.device))
+            image_encoder = torch.nn.DataParallel(image_encoder.to(self.device))
+            netG = torch.nn.DataParallel(netG.to(self.device))
             for i in range(len(netsD)):
-                netsD[i].cuda()
+                netsD[i] = torch.nn.DataParallel(netsD[i].to(self.device))
         return [text_encoder, image_encoder, netG, netsD, epoch]
 
     def define_optimizers(self, netG, netsD):
