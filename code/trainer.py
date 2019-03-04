@@ -33,7 +33,15 @@ class condGANTrainer(object):
             mkdir_p(self.model_dir)
             mkdir_p(self.image_dir)
 
-        torch.cuda.set_device(cfg.GPU_ID)
+        # torch.cuda.set_device(cfg.GPU_ID)
+        # setup GPU device if available, move model into configured device
+        if torch.cuda.is_available():
+            print("use GPU")
+            self.device = torch.device('cuda')
+        else:
+            print("use CPU")
+            self.device = torch.device('cpu')
+
         cudnn.benchmark = True
 
         self.batch_size = cfg.TRAIN.BATCH_SIZE
@@ -51,7 +59,7 @@ class condGANTrainer(object):
             print('Error: no pretrained text-image encoders')
             return
 
-        image_encoder = CNN_ENCODER(cfg.TEXT.EMBEDDING_DIM)
+        image_encoder = torch.nn.DataParallel(CNN_ENCODER(cfg.TEXT.EMBEDDING_DIM).to(self.device))
         img_encoder_path = cfg.TRAIN.NET_E.replace('text_encoder', 'image_encoder')
         state_dict = \
             torch.load(img_encoder_path, map_location=lambda storage, loc: storage)
@@ -62,7 +70,7 @@ class condGANTrainer(object):
         image_encoder.eval()
 
         text_encoder = \
-            RNN_ENCODER(self.n_words, nhidden=cfg.TEXT.EMBEDDING_DIM)
+            torch.nn.DataParallel(RNN_ENCODER(self.n_words, nhidden=cfg.TEXT.EMBEDDING_DIM).to(self.device))
         state_dict = \
             torch.load(cfg.TRAIN.NET_E,
                        map_location=lambda storage, loc: storage)
@@ -82,11 +90,11 @@ class condGANTrainer(object):
             else:  # cfg.TREE.BRANCH_NUM == 3:
                 from model import D_NET256 as D_NET
             # TODO: elif cfg.TREE.BRANCH_NUM > 3:
-            netG = G_DCGAN()
+            netG = torch.nn.DataParallel(G_DCGAN().to(self.device))
             netsD = [D_NET(b_jcu=False)]
         else:
             from model import D_NET64, D_NET128, D_NET256
-            netG = G_NET()
+            netG = torch.nn.DataParallel(G_NET().to(self.device))
             if cfg.TREE.BRANCH_NUM > 0:
                 netsD.append(D_NET64())
             if cfg.TREE.BRANCH_NUM > 1:
@@ -287,7 +295,7 @@ class condGANTrainer(object):
                 # self.set_requires_grad_value(netsD, False)
                 netG.zero_grad()
                 print("step: ", step)
-                print(torch.device)
+
                 errG_total, G_logs = \
                     generator_loss(netsD, image_encoder, fake_imgs, real_labels,
                                    words_embs, sent_emb, match_labels, cap_lens, class_ids)
@@ -355,14 +363,14 @@ class condGANTrainer(object):
                 split_dir = 'valid'
             # Build and load the generator
             if cfg.GAN.B_DCGAN:
-                netG = G_DCGAN()
+                netG = torch.nn.DataParallel(G_DCGAN().to(self.device))
             else:
-                netG = G_NET()
+                netG = torch.nn.DataParallel(G_NET().to(self.device))
             netG.apply(weights_init)
             netG.cuda()
             netG.eval()
             #
-            text_encoder = RNN_ENCODER(self.n_words, nhidden=cfg.TEXT.EMBEDDING_DIM)
+            text_encoder = torch.nn.DataParallel(RNN_ENCODER(self.n_words, nhidden=cfg.TEXT.EMBEDDING_DIM).to(self.device))
             state_dict = \
                 torch.load(cfg.TRAIN.NET_E, map_location=lambda storage, loc: storage)
             text_encoder.load_state_dict(state_dict)
@@ -437,7 +445,7 @@ class condGANTrainer(object):
         else:
             # Build and load the generator
             text_encoder = \
-                RNN_ENCODER(self.n_words, nhidden=cfg.TEXT.EMBEDDING_DIM)
+                torch.nn.DataParallel(RNN_ENCODER(self.n_words, nhidden=cfg.TEXT.EMBEDDING_DIM).to(self.device))
             state_dict = \
                 torch.load(cfg.TRAIN.NET_E, map_location=lambda storage, loc: storage)
             text_encoder.load_state_dict(state_dict)
@@ -447,9 +455,9 @@ class condGANTrainer(object):
 
             # the path to save generated images
             if cfg.GAN.B_DCGAN:
-                netG = G_DCGAN()
+                netG = torch.nn.DataParallel(G_DCGAN().to(self.device))
             else:
-                netG = G_NET()
+                netG = torch.nn.DataParallel(G_NET().to(self.device))
             s_tmp = cfg.TRAIN.NET_G[:cfg.TRAIN.NET_G.rfind('.pth')]
             model_dir = cfg.TRAIN.NET_G
             state_dict = \
