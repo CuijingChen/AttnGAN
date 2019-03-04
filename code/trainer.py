@@ -33,7 +33,7 @@ class condGANTrainer(object):
             mkdir_p(self.model_dir)
             mkdir_p(self.image_dir)
 
-        # torch.cuda.set_device(cfg.GPU_ID)
+        torch.cuda.set_device(cfg.GPU_ID)
         # setup GPU device if available, move model into configured device
         if torch.cuda.is_available():
             print("use GPU")
