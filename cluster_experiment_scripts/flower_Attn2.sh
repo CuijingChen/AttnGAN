@@ -35,4 +35,4 @@ export DATASET_DIR=${TMP}/datasets/
 source /home/${STUDENT_ID}/miniconda3/bin/activate I2T2I
 cd ..
 cd code/
-python main.py --cfg cfg/flower_attn2.yml --gpu 2
+python main.py --cfg cfg/flower_attn2.yml --gpu 0
